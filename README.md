@@ -1,7 +1,7 @@
 # Individual-Loan-Default-Prediction
 Term Project for GR5291 Advanced Data Analysis
 
-All data from [LendingClub.com](https://www.lendingclub.com/info/download-data.action)
+All data are public and downloaded from [LendingClub.com](https://www.lendingclub.com/info/download-data.action), for study purpose only.
 
 ## Tools and techniques
 R (Data pre-processing, EDA, logistic regression, random forest, XGBoost)  
