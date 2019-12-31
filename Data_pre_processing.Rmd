@@ -1,0 +1,367 @@
+---
+title: "5291Project_draft"
+author: "yz3380"
+date: "October 20, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Data Cleaning  
+```{r}
+# read the data
+data_Q1 <- read.csv('LoanStats_securev1_2018Q1.csv', skip=1)
+dict <- read.csv('LCDataDictionary.csv')
+variable_selected <- as.vector(dict$LoanStatNew[dict$Keep!=''])
+
+# drop data with no response or multiple applicants
+'%ni%' <- Negate('%in%')
+data_Q1_p <- data_Q1[data_Q1$loan_status %ni% c('Current', ''), ]
+data_Q1_p <- data_Q1_p[data_Q1_p$application_type %ni% c('Joint App', ''), ]
+summary(as.factor(data_Q1_p$loan_status))
+
+# keep only selected variables
+data_Q1_p <- subset(data_Q1_p, select=variable_selected)
+colSums(is.na(data_Q1_p))
+# remove columns with large propotional missing values
+data_Q1_p <- subset(data_Q1_p, select = -c(il_util, percent_bc_gt_75, num_tl_120dpd_2m))
+# note that there are some 'n/a' values in emp_length
+sum(data_Q1_p$emp_length=='n/a')
+
+# check response variable and write into new csv
+summary(as.factor(data_Q1_p$loan_status))
+write.csv(data_Q1_p,'2018Q1.csv', row.names = FALSE)
+
+# modify response into binary class
+data_Q1_p$loan_status <- ifelse(data_Q1_p$loan_status=='Fully Paid', 1, 0) # 1 as fully paid, 0 as default
+
+# check response variable
+summary(as.factor(data_Q1_p$loan_status))
+colSums(is.na(data_Q1_p))
+
+dim(data_Q1_p)
+```
+
+###Data Cleaning V2.  
+```{r}
+# read the data
+data_Q1 <- read.csv('LoanStats_securev1_2018Q1.csv', skip=1)
+dict <- read.csv('final_variable.csv')
+variable_selected <- as.vector(dict$LoanStatNew[dict$Keep!=''])
+
+# drop data with no response or multiple applicants
+'%ni%' <- Negate('%in%')
+data_Q1_p <- data_Q1[data_Q1$loan_status %ni% c('Current', ''), ]
+data_Q1_p <- data_Q1_p[data_Q1_p$application_type %ni% c('Joint App', ''), ]
+summary(as.factor(data_Q1_p$loan_status))
+
+# keep only selected variables
+data_Q1_p <- subset(data_Q1_p, select=variable_selected)
+colSums(is.na(data_Q1_p))
+
+
+# Pre-processing
+data_Q1_p$dti <- data_Q1_p$dti / 100
+data_Q1_p$pct_tl_nvr_dlq <- data_Q1_p$pct_tl_nvr_dlq / 100
+data_Q1_p$annual_inc <- log(data_Q1_p$annual_inc)
+data_Q1_p$installment <- log(data_Q1_p$installment)
+data_Q1_p$tot_coll_amt <- ifelse(data_Q1_p$tot_coll_amt==0, 0, log(data_Q1_p$tot_coll_amt))
+
+# transform response variable and write into new csv
+data_Q1_p$loan_status <- ifelse(data_Q1_p$loan_status=='Fully Paid', 1, 0)
+write.csv(data_Q1_p,'2018Q1_full.csv', row.names = FALSE)
+```
+
+###EDA on dti  
+```{r}
+data_Q1 <- read.csv('2018Q1.csv')
+data_Q1$loan_status <- ifelse(data_Q1$loan_status=='Fully Paid', 1, 0)
+
+# extract dti divided into two groups
+dti_paid <- data_Q1$dti[data_Q1$loan_status==1]
+dti_default <- data_Q1$dti[data_Q1$loan_status==0]
+
+# summary
+summary(dti_paid)
+summary(dti_default)
+
+# plots
+library(ggplot2)
+
+paid <- data.frame(group = "paid", value = dti_paid)
+default <- data.frame(group = "default", value = dti_default)
+dti.data <- rbind(paid, default)
+ggplot(dti.data, aes(x=group, y=value, fill=group)) + geom_boxplot() + scale_fill_manual(name = "Debt to income", values = c("coral", "deepskyblue")) +  theme(legend.title = element_text(size = 30), legend.text = element_text(size = 30))
+
+ggplot()+geom_histogram(mapping=aes(x=dti_paid,y=..density..),fill='deepskyblue', col="grey",bins=20)
+ggplot()+geom_histogram(mapping=aes(x=dti_default,y=..density..),fill='deepskyblue', col="grey",bins=20)
+
+qqnorm(dti_paid)
+qqnorm(dti_default)
+
+# two sample t-test
+# claim: paid and default group have the same dti
+# assumptions: independent, normality, equal variance
+
+# check equal variance assumption
+# use Brown-Forsythe test
+library(onewaytests)
+bf.test(value~group, data=dti.data)
+
+# reject non hypothesis, use two sample t with unequal variance (Welch's modified two-sample t test)
+t.test(dti_paid, dti_default)
+```
+  
+###Test on home mortgage  
+```{r}
+data_Q1 <- read.csv('2018Q1.csv')
+data_Q1$loan_status <- ifelse(data_Q1$loan_status=='Fully Paid', 1, 0)
+
+home_mtg <- table(data_Q1$loan_status, data_Q1$home_ownership)
+home_mtg
+
+# two sample test for equality of proportions with Yate's continuity correction
+# mortgage vs rent
+x <- c(home_mtg[1,2], home_mtg[1,4])
+n <- c(home_mtg[1,2]+home_mtg[2,2], home_mtg[1,4]+home_mtg[2,4])
+prop.test(x,n)
+# result suggest reject null
+
+# own vs rent
+x <- c(home_mtg[1,3], home_mtg[1,4])
+n <- c(home_mtg[1,3]+home_mtg[2,3], home_mtg[1,4]+home_mtg[2,4])
+prop.test(x,n)
+# reject null
+
+# mortgage vs own
+x <- c(home_mtg[1,2], home_mtg[1,3])
+n <- c(home_mtg[1,2]+home_mtg[2,2], home_mtg[1,3]+home_mtg[2,3])
+prop.test(x,n)
+# again reject
+```
+  
+###EDA on annual income
+```{r}
+data_Q1 <- read.csv('2018Q1.csv')
+data_Q1$loan_status <- ifelse(data_Q1$loan_status=='Fully Paid', 1, 0)
+
+ai_paid <- data_Q1$annual_inc[data_Q1$loan_status==1]
+ai_default <- data_Q1$annual_inc[data_Q1$loan_status==0]
+
+library(ggplot2)
+paid <- data.frame(group = "paid", value = ai_paid)
+default <- data.frame(group = "default", value = ai_default)
+ai.data <- rbind(paid, default)
+ggplot(ai.data, aes(x=group, y=value, fill=group)) + coord_flip() + geom_boxplot() + ggtitle('Income') + theme(legend.title = element_text(size = 50), legend.text = element_text(size = 50))
+
+ai.data$value <- log(ai.data$value)
+
+library(onewaytests)
+bf.test(value~group, data=ai.data)
+
+t.test(ai_paid, ai_default)
+```
+  
+###EDA on installment
+```{r}
+data_Q1 <- read.csv('2018Q1.csv')
+data_Q1$loan_status <- ifelse(data_Q1$loan_status=='Fully Paid', 1, 0)
+# remove outlier
+#data_Q1 <- data_Q1[data_Q1$annual_inc<200000,]
+
+ins_paid <- data_Q1$installment[data_Q1$loan_status==1]
+ins_default <- data_Q1$installment[data_Q1$loan_status==0]
+
+library(ggplot2)
+paid <- data.frame(group = "paid", value = ins_paid)
+default <- data.frame(group = "default", value = ins_default)
+ins.data <- rbind(paid, default)
+
+ins.data$value <- log(ins.data$value)
+ggplot(ins.data, aes(x=group, y=value, fill=group)) + coord_flip() + geom_boxplot() + ggtitle('Installment') + theme(legend.title = element_text(size = 50), legend.text = element_text(size = 50))
+
+
+library(onewaytests)
+bf.test(value~group, data=ins.data)
+
+t.test(ins_paid, ins_default)
+```
+
+###Missing Value  
+```{r}
+library(ggplot2)
+
+data_Q1 <- read.csv('LoanStats_securev1_2018Q1.csv', skip=1)
+missing <- colSums(is.na(data_Q1))
+
+ggplot(data.frame(missing),aes(seq_along(missing),missing))+geom_bar(stat="identity", bins=50)+labs(title="Missing Values", x="variables", y="count")
+
+n <- dim(data_Q1)[1]
+sum(missing/n > 0.05)
+
+# filter high missing value proportion variables
+missing <- missing[missing/n<0.05]
+
+# check hardship, settlement, joint
+name <- names(missing)
+name <- name[!grepl('hardship', name)]
+name <- name[!grepl('settlement', name)]
+name <- name[!grepl('joint', name)]
+length(name) # 105 left
+```
+```{r}
+data_Q1 <- read.csv('2018Q1.csv')
+data_Q1$loan_status <- ifelse(data_Q1$loan_status=='Fully Paid', 1, 0)
+# remove outlier
+#data_Q1 <- data_Q1[data_Q1$annual_inc<200000,]
+
+num_paid <- data_Q1$num_bc_tl[data_Q1$loan_status==1]
+num_default <- data_Q1$num_bc_tl[data_Q1$loan_status==0]
+
+library(ggplot2)
+t.test(num_paid, num_default)
+
+ggplot()+geom_histogram(mapping=aes(x=num_paid,y=..density..),fill='deepskyblue', col="grey",bins=20)
+ggplot()+geom_histogram(mapping=aes(x=num_default,y=..density..),fill='deepskyblue', col="grey",bins=20)
+```
+
+###Data Preprocessing using BrowseNote
+```{r}
+# read raw data
+data_Q1 <- read.csv('LoanStats_securev1_2018Q1.csv', skip=1)
+dnames <- colnames(data_Q1)
+
+# BrowseNote (variables available to investors)
+browsenote <- read.csv('BrowseNote.csv')
+browsenote <- browsenote[1:120, ]
+bnames <- as.vector(browsenote[,1])
+# transform to lower case
+bnames <- as.vector(sapply(bnames, tolower))
+
+# remove punctuation characters and blanks
+bnames <- gsub('[[:blank:]$]', '', bnames)
+bnames_pure <- gsub('[[:punct:]]', '', bnames)
+dnames_pure <- gsub('[[:punct:]]', '', dnames)
+
+# check identical variable names
+var_index <- dnames_pure %in% bnames_pure
+dnames <- dnames[var_index]
+dnames[104] <- 'loan_status'
+
+# subset the data
+data_Q1 <- subset(data_Q1, select=dnames)
+dim(data_Q1) # now we have 104 variables (1 response)
+
+# drop data with no response or multiple applicants
+'%ni%' <- Negate('%in%')
+data_Q1 <- data_Q1[data_Q1$loan_status %ni% c('Current', ''), ]
+data_Q1 <- data_Q1[data_Q1$application_type %ni% c('Joint App', ''), ]
+dim(data_Q1) # 104 variables (1 response)
+
+# remove date time values
+date_var <- c('earliest_cr_line', 'sec_app_earliest_cr_line')
+data_Q1 <- data_Q1[, !(names(data_Q1) %in% date_var)]
+dim(data_Q1) # 102 variables
+
+# check missing values
+missing <- colSums(is.na(data_Q1))
+n <- dim(data_Q1)[1]
+data_Q1 <- data_Q1[, missing/n<0.15]
+dim(data_Q1) # 81 variables
+
+# remove 'num_tl_120dpd_2m' because it has only 1 category
+drop <- c('num_tl_120dpd_2m')
+
+# multicolinearity, keep one with better interpretation
+# 'grade', 'subgrade', 'int_rate'
+drop = c(drop, 'grade', 'int_rate')
+# 'purpose', 'title'
+drop = c(drop, 'title')
+# 'acc_now_delinq', 'num_tl_30dpd'
+drop = c(drop, 'num_tl_30dpd')
+# 'fico_range_high', 'fico_range_low'
+drop = c(drop, 'fico_range_high')
+# 'funded_amnt', 'installment', 'loan_amnt'
+drop = c(drop, 'funded_amnt', 'loan_amnt')
+# 'mo_sin_old_il_acct', 'mths_since_rcnt_il'
+drop = c(drop, 'mo_sin_old_il_acct')
+# 'num_actv_rev_tl', 'num_rev_tl_bal_gt_0'
+drop = c(drop, 'num_rev_tl_bal_gt_0')
+# 'num_sats', 'open_acc'
+drop = c(drop, 'num_sats')
+# 'tot_cur_bal', 'tot_hi_cred_lim'
+drop = c(drop, 'tot_hi_cred_lim')
+# 'total_bal_ex_mort', 'total_bal_il', 'total_il_high_credit_limit'
+drop = c(drop, 'total_bal_ex_mort')
+data_Q1 <- data_Q1[, !(names(data_Q1) %in% drop)]
+dim(data_Q1) # 69 variables
+
+# unrelated variables
+drop2 <- c('id', 'emp_title', 'url', 'zip_code', 'addr_state', 'inital_list_status', 'collections_12_mths_ex_med', 'application_type', 'delinq_amnt')
+data_Q1 <- data_Q1[, !(names(data_Q1) %in% drop2)]
+dim(data_Q1) # 61 variables
+
+# transformation
+data_Q1$dti <- data_Q1$dti / 100
+data_Q1$pct_tl_nvr_dlq <- data_Q1$pct_tl_nvr_dlq / 100
+data_Q1$annual_inc <- log(data_Q1$annual_inc)
+data_Q1$installment <- log(data_Q1$installment)
+data_Q1$revol_bal <- ifelse(data_Q1$revol_bal==0, 0, log(data_Q1$revol_bal))
+data_Q1$total_bal_il <- ifelse(data_Q1$total_bal_il==0, 0, log(data_Q1$total_bal_il))
+data_Q1$tot_cur_bal <- ifelse(data_Q1$tot_cur_bal==0, 0, log(data_Q1$tot_cur_bal))
+data_Q1$max_bal_bc <- ifelse(data_Q1$max_bal_bc==0, 0, log(data_Q1$max_bal_bc))
+data_Q1$total_rev_hi_lim <- ifelse(data_Q1$total_rev_hi_lim==0, 0, log(data_Q1$total_rev_hi_lim))
+data_Q1$avg_cur_bal <- ifelse(data_Q1$avg_cur_bal==0, 0, log(data_Q1$avg_cur_bal))
+data_Q1$bc_open_to_buy <- ifelse(data_Q1$bc_open_to_buy==0, 0, log(data_Q1$bc_open_to_buy))
+data_Q1$total_bc_limit <- ifelse(data_Q1$total_bc_limit==0, 0, log(data_Q1$total_bc_limit))
+data_Q1$total_il_high_credit_limit <- ifelse(data_Q1$total_il_high_credit_limit==0, 0, log(data_Q1$total_il_high_credit_limit))
+data_Q1$percent_bc_gt_75 <- data_Q1$percent_bc_gt_75 / 100
+data_Q1$revol_util <- as.numeric(gsub('\\%','',data_Q1$revol_util)) / 100
+
+# na values
+data_Q1[is.na(data_Q1)] <- 0
+# transform response variable and write into new csv
+data_Q1$loan_status <- ifelse(data_Q1$loan_status=='Fully Paid', 1, 0)
+dim(data_Q1) # 60 independent variables, 1 response, 34602 observation
+write.csv(data_Q1,'2018Q1_processed.csv', row.names = FALSE)
+
+# output the complete variable list
+lcd <- read.csv('LCDataDictionary.csv')
+lcd$LoanStatNew <- as.vector(lcd$LoanStatNew)
+lcd$LoanStatNew[111] <- 'total_rev_hi_lim'
+feature <- lcd[lcd$LoanStatNew %in% names(data_Q1), c(1,4)]
+write.csv(feature,'selected_features.csv', row.names=FALSE)
+```
+  
+###EDA for reports  
+```{r}
+# loan_status
+# data_Q1$loan_status <- ifelse(data_Q1$loan_status=='Fully Paid', 1, 0)
+data_full <- read.csv('2018full_processed_new.csv')
+response <- as.vector(data_full$loan_status)
+response <- data.frame(response)
+par(las=2)
+par(mar=c(8,4,1,1))
+barplot(table(response))
+library(ggplot2)
+ggplot(response, aes(response))+geom_bar()+labs(title='Loan status')+theme(axis.text.x = element_text(size=15, angle = 45, hjust = 1), title=element_text(size=20))
+
+# annual income
+data_Q1$annual_inc <- exp(data_Q1$annual_inc)
+summary(data_Q1$annual_inc)
+data_Q1$annual_inc <- log(data_Q1$annual_inc)
+
+data_Q1$loan_status <- ifelse(data_Q1$loan_status=='Fully Paid', 1, 0)
+ai_paid <- data_Q1$annual_inc[data_Q1$loan_status==1]
+ai_default <- data_Q1$annual_inc[data_Q1$loan_status==0]
+paid <- data.frame(group = "paid", value = ai_paid)
+default <- data.frame(group = "default", value = ai_default)
+ai.data <- rbind(paid, default)
+#ggplot(ai.data, aes(x=group, y=value, fill=group)) + coord_flip() + geom_boxplot() + ggtitle('Income') + theme(legend.title = element_text(size = 20), legend.text = element_text(size = 20)) + scale_y_continuous(limits = c(10, 12))
+#par(las=1)
+#par(mar=c(3,3,2,2))
+boxplot(ai.data$value~ai.data$group, main='Log Annual Income')
+```
+
