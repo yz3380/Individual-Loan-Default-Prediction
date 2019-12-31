@@ -1,0 +1,37 @@
+---
+title: "EDA - Response & Annual Income"
+author: "yz3380"
+date: "December 9, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### EDA - Response & Annual Income
+```{r cars}
+# response variable
+data_full <- read.csv('2018full_processed_new.csv')
+response <- as.vector(data_full$loan_status)
+response <- data.frame(response)
+par(las=2)
+par(mar=c(8,4,1,1))
+barplot(table(response))
+library(ggplot2)
+ggplot(response, aes(response))+geom_bar()+labs(title='Loan status')+theme(axis.text.x = element_text(size=15, angle = 45, hjust = 1), title=element_text(size=20))
+
+# annual income
+data_Q1 <- read.csv('2018Q1_processed.csv')
+data_Q1$annual_inc <- exp(data_Q1$annual_inc)
+summary(data_Q1$annual_inc)
+data_Q1$annual_inc <- log(data_Q1$annual_inc)
+
+#data_Q1$loan_status <- ifelse(data_Q1$loan_status=='Fully Paid', 1, 0)
+ai_paid <- data_Q1$annual_inc[data_Q1$loan_status==1]
+ai_default <- data_Q1$annual_inc[data_Q1$loan_status==0]
+paid <- data.frame(group = "paid", value = ai_paid)
+default <- data.frame(group = "default", value = ai_default)
+ai.data <- rbind(paid, default)
+boxplot(ai.data$value~ai.data$group, main='Log Annual Income')
+```

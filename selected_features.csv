@@ -1,0 +1,62 @@
+LoanStatNew,Description
+acc_now_delinq,The number of accounts on which the borrower is now delinquent.
+acc_open_past_24mths,Number of trades opened in past 24 months.
+all_util,Balance to credit limit on all trades
+annual_inc,The self-reported annual income provided by the borrower during registration.
+avg_cur_bal,Average current balance of all accounts
+bc_open_to_buy,Total open to buy on revolving bankcards.
+bc_util,Ratio of total current balance to high credit/credit limit for all bankcard accounts.
+chargeoff_within_12_mths,Number of charge-offs within 12 months
+delinq_2yrs,The number of 30+ days past-due incidences of delinquency in the borrower's credit file for the past 2 years
+dti,"A ratio calculated using the borrower??s total monthly debt payments on the total debt obligations, excluding mortgage and the requested LC loan, divided by the borrower??s self-reported monthly income."
+emp_length,Employment length in years. Possible values are between 0 and 10 where 0 means less than one year and 10 means ten or more years. 
+fico_range_low,The lower boundary range the borrower??s FICO at loan origination belongs to.
+home_ownership,"The home ownership status provided by the borrower during registration?or obtained from the credit report.?Our values are: RENT, OWN, MORTGAGE, OTHER"
+initial_list_status,"The initial listing status of the loan. Possible values are ?C W, F"
+inq_fi,Number of personal finance inquiries
+inq_last_12m,Number of credit inquiries in past 12 months
+inq_last_6mths,The number of inquiries in past 6 months (excluding auto and mortgage inquiries)
+installment,The monthly payment owed by the borrower if the loan originates.
+loan_status,Current status of the loan
+max_bal_bc,Maximum current balance owed on all revolving accounts
+mo_sin_old_rev_tl_op,Months since oldest revolving account opened
+mo_sin_rcnt_rev_tl_op,Months since most recent revolving account opened
+mo_sin_rcnt_tl,Months since most recent account opened
+mort_acc,Number of mortgage accounts.
+mths_since_rcnt_il,Months since most recent installment accounts opened
+mths_since_recent_bc,Months since most recent bankcard account opened.
+num_accts_ever_120_pd,Number of accounts ever 120 or more days past due
+num_actv_bc_tl,Number of currently active bankcard accounts
+num_actv_rev_tl,Number of currently active revolving trades
+num_bc_sats,Number of satisfactory bankcard accounts
+num_bc_tl,Number of bankcard accounts
+num_il_tl,Number of installment accounts
+num_op_rev_tl,Number of open revolving accounts
+num_rev_accts,Number of revolving accounts
+num_tl_90g_dpd_24m,Number of accounts 90 or more days past due in last 24 months
+num_tl_op_past_12m,Number of accounts opened in past 12 months
+open_acc,The number of open credit lines in the borrower's credit file.
+open_acc_6m,Number of open trades in last 6 months
+open_il_12m,Number of installment accounts opened in past 12 months
+open_il_24m,Number of installment accounts opened in past 24 months
+open_act_il,Number of currently active installment trades
+open_rv_12m,Number of revolving trades opened in past 12 months
+open_rv_24m,Number of revolving trades opened in past 24 months
+pct_tl_nvr_dlq,Percent of trades never delinquent
+percent_bc_gt_75,Percentage of all bankcard accounts > 75% of limit.
+pub_rec,Number of derogatory public records
+pub_rec_bankruptcies,Number of public record bankruptcies
+purpose,A category provided by the borrower for the loan request. 
+revol_bal,Total credit revolving balance
+revol_util,"Revolving line utilization rate, or the amount of credit the borrower is using relative to all available revolving credit."
+sub_grade,LC assigned loan subgrade
+tax_liens,Number of tax liens
+term,The number of payments on the loan. Values are in months and can be either 36 or 60.
+tot_coll_amt,Total collection amounts ever owed
+tot_cur_bal,Total current balance of all accounts
+total_acc,The total number of credit lines currently in the borrower's credit file
+total_bal_il,Total current balance of all installment accounts
+total_bc_limit,Total bankcard high credit/credit limit
+total_cu_tl,Number of finance trades
+total_il_high_credit_limit,Total installment high credit/credit limit
+total_rev_hi_lim,Total revolving high credit/credit limit
